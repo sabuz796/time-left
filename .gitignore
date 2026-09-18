@@ -1,0 +1,10 @@
+.DS_Store
+*.dmg
+YearPassing/YearPassing
+.build/
+build/
+dist/
+.agents/
+.claude/
+skills-lock.json
+design-preview.html
