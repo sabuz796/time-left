@@ -20,7 +20,7 @@ It lives quietly in your macOS menu bar as a small `⏳ Y: 71%` icon. Click it a
 - 🕐 **Day** — "20h 35m left of today"
 - 📅 **Month** — "12 days left"
 - 🗓️ **Year** — "104 days left"
-- 🔋 **~0.5 MB, no window, no dock icon, no network** — it just works, all day, on every Mac from macOS 13+
+- 🔋 **~0.5 MB, no window, no dock icon, no network** — it just works, all day, on every Mac from macOS 13+ (Apple Silicon and Intel)
 
 For anyone who likes a quiet reminder that time is the one thing you can't get back. ⏳
 
@@ -37,7 +37,7 @@ For anyone who likes a quiet reminder that time is the one thing you can't get b
 
 ## Install (one file)
 
-1. Build or grab `dist/TimeLeft.dmg` from a release
+1. Build or grab `dist/TimeLeft.dmg` from a release (universal binary — Apple Silicon and Intel)
 2. Double-click → drag `TimeLeft.app` → `Applications`
 3. Open `TimeLeft` — find `⏳ Y: 71%` in menu bar → click for Day/Month/Year scopes, animated ring, and the Launch-at-Login toggle
 
