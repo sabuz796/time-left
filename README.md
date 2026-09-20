@@ -18,6 +18,7 @@ Minimal macOS menu bar app that shows how much of your **day / month / year** ha
 It lives quietly in your macOS menu bar as a small `⏳ Y: 71%` icon. Click it and you get a popover with an **animated progress ring** showing how much of the **day, month, or year** has already passed — and how much is left, in plain numbers ("104 days left"). Pick the scope you care about, tick **Launch at Login**, and let it sit there as a gentle nudge to make the rest count.
 
 - 🕐 **Day** — "20h 35m left of today"
+- 📅 **Week** — "3 days left"
 - 📅 **Month** — "12 days left"
 - 🗓️ **Year** — "104 days left"
 - 🔋 **~0.5 MB, no window, no dock icon, no network** — it just works, all day, on every Mac from macOS 13+ (Apple Silicon and Intel)
@@ -56,13 +57,16 @@ Then open the app normally. This only clears Gatekeeper's quarantine attribute �
 ## Swift only, butter smooth
 
 * **Pure SwiftUI** — `MenuBarExtra` + `ProgressView` + `Calendar` (no JS/Python/deps, `otool -L` shows only `SwiftUI/AppKit/Foundation`)
-* **Selectable scope** — Day/Month/Year pills + rows; choice persists via `@AppStorage`; tray label follows (`D: 64%` / `M: 55%` / `Y: 71%`)
+* **Selectable scope** — Day/Week/Month/Year pills + rows; choice persists via `@AppStorage`; tray label follows (`D: 64%` / `W: 57%` / `M: 55%` / `Y: 71%`)
 * **Launch at Login** — checkbox in the popover, backed by `SMAppService`
 * **Timed** — refreshes every 60s via `Timer.publish`
 
 ## Dev
 
 ```bash
+# build + run instantly (no install) — your edit-test loop
+./scripts/dev.sh
+
 # build the app bundle (build/.apps/TimeLeft.app — hidden so Launchpad shows only /Applications)
 ./scripts/build.sh
 
@@ -70,10 +74,21 @@ Then open the app normally. This only clears Gatekeeper's quarantine attribute �
 ./scripts/build-dmg.sh
 ```
 
+## Releasing
+
+```bash
+# tag a release (triggers GitHub Actions → builds DMG + publishes release automatically)
+git tag v1.1
+git push origin v1.1
+```
+
+Or manually: `./scripts/build-dmg.sh` → GitHub → Releases → New release → attach `dist/TimeLeft.dmg`.
+
 ## Structure
 
 ```
-scripts/build.sh            // swiftc → build/.apps/TimeLeft.app
+scripts/build.sh            // swiftc → build/.apps/TimeLeft.app (universal, re-signed)
+scripts/dev.sh              // build + run without installing
 scripts/build-dmg.sh        // gen_bg.swift + hdiutil → dist/TimeLeft.dmg
 scripts/gen_bg.swift        // 660×400 DMG background (“100% on-device • No network… ”)
 YearPassing/YearPassingApp.swift   // MenuBarExtra: pills, ring hero, selectable rows, launch-at-login toggle

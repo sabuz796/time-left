@@ -5,6 +5,7 @@ extension Scope {
     var color: Color {
         switch self {
         case .day: .blue
+        case .week: .purple
         case .month: .green
         case .year: .orange
         }

@@ -1,11 +1,12 @@
 import Foundation
 
 enum Scope: String, CaseIterable {
-    case day, month, year
+    case day, week, month, year
 
     var name: String {
         switch self {
         case .day: "Day"
+        case .week: "Week"
         case .month: "Month"
         case .year: "Year"
         }
@@ -14,6 +15,7 @@ enum Scope: String, CaseIterable {
     var letter: String {
         switch self {
         case .day: "D"
+        case .week: "W"
         case .month: "M"
         case .year: "Y"
         }
@@ -22,12 +24,14 @@ enum Scope: String, CaseIterable {
 
 struct TimeProgress {
     let day: Double      // 0.0 – 1.0
+    let week: Double     // 0.0 – 1.0
     let month: Double    // 0.0 – 1.0
     let year: Double     // 0.0 – 1.0
 
     func value(for scope: Scope) -> Double {
         switch scope {
         case .day: day
+        case .week: week
         case .month: month
         case .year: year
         }
@@ -41,6 +45,11 @@ func timeLeftLabel(for scope: Scope, date: Date = Date()) -> String {
         let endOfDay = calendar.startOfDay(for: date).addingTimeInterval(24 * 60 * 60)
         let comps = calendar.dateComponents([.hour, .minute], from: date, to: endOfDay)
         return "\(comps.hour ?? 0)h \(comps.minute ?? 0)m left"
+    case .week:
+        // weekday 1 = first day of the week in the user's calendar
+        let weekday = calendar.component(.weekday, from: date)
+        let daysLeft = 7 - weekday
+        return leftLabel(days: daysLeft)
     case .month:
         let daysInMonth = calendar.range(of: .day, in: .month, for: date)?.count ?? 30
         let dayOfMonth = calendar.component(.day, from: date)
@@ -64,6 +73,10 @@ func calculateProgress(for date: Date = Date()) -> TimeProgress {
     let minute = calendar.component(.minute, from: date)
     let dayProgress = Double(hour * 60 + minute) / (24.0 * 60.0)
 
+    // Week progress (weekday 1 = first day of the week in user's calendar)
+    let weekday = calendar.component(.weekday, from: date)
+    let weekProgress = Double(weekday - 1) / 7.0
+
     // Month progress
     let dayOfMonth = calendar.component(.day, from: date)
     let daysInMonth = calendar.range(of: .day, in: .month, for: date)?.count ?? 30
@@ -74,5 +87,5 @@ func calculateProgress(for date: Date = Date()) -> TimeProgress {
     let daysInYear = calendar.range(of: .day, in: .year, for: date)?.count ?? 365
     let yearProgress = Double(dayOfYear - 1) / Double(daysInYear)
 
-    return TimeProgress(day: dayProgress, month: monthProgress, year: yearProgress)
+    return TimeProgress(day: dayProgress, week: weekProgress, month: monthProgress, year: yearProgress)
 }
