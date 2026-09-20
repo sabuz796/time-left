@@ -7,7 +7,7 @@
 > “Don’t waste your time in anger, regrets, worries, and grudges. Life is too short to be unhappy.”
 > — Roy T. Bennett
 
-Minimal macOS menu bar app that shows how much of your **day / month / year** has passed. No network, no tracking, no data leaves your Mac.
+Minimal macOS menu bar app that shows how much of your **day / week / month / year** has passed. No network, no tracking, no data leaves your Mac.
 
 ![Swift](https://img.shields.io/badge/Swift-6.3-orange) ![macOS](https://img.shields.io/badge/macOS-13+-blue) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
@@ -28,19 +28,21 @@ For anyone who likes a quiet reminder that time is the one thing you can't get b
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="images/day.png" width="30%" alt="Day view">
+  <img src="images/day.png" width="22%" alt="Day view">
   &nbsp;
-  <img src="images/month.png" width="30%" alt="Month view">
+  <img src="images/week.png" width="22%" alt="Week view">
   &nbsp;
-  <img src="images/year.png" width="30%" alt="Year view">
+  <img src="images/month.png" width="22%" alt="Month view">
+  &nbsp;
+  <img src="images/year.png" width="22%" alt="Year view">
 </p>
-<p align="center"><i>Day • Month • Year — switch scopes with the pills, the ring and menu-bar label follow. <b>Launch at Login</b> keeps Time Left running from day one.</i></p>
+<p align="center"><i>Day • Week • Month • Year — switch scopes with the pills, the ring and menu-bar label follow. <b>Launch at Login</b> keeps Time Left running from day one.</i></p>
 
 ## Install (one file)
 
 1. Build or grab `dist/TimeLeft.dmg` from a release (universal binary — Apple Silicon and Intel)
 2. Double-click → drag `TimeLeft.app` → `Applications`
-3. Open `TimeLeft` — find `⏳ Y: 71%` in menu bar → click for Day/Month/Year scopes, animated ring, and the Launch-at-Login toggle
+3. Open `TimeLeft` — find `⏳ Y: 71%` in menu bar → click for Day/Week/Month/Year scopes, animated ring, and the Launch-at-Login toggle
 
 > 🔒 **Privacy friendly — absolutely nothing leaves this machine.** All calculations run locally in `YearPassing/TimeCalculations.swift` using `Calendar.current`. No `URLSession`, no analytics.
 
