@@ -9,8 +9,6 @@ rm -rf "$STAGE"
 mkdir -p "$STAGE"
 cp -R "$ROOT/build/.apps/TimeLeft.app" "$STAGE/"
 
-(cd "$ROOT" && swift scripts/gen_bg.swift)
-
 mkdir -p "$ROOT/dist"
 hdiutil create \
   -volname "Time Left" \
