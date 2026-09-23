@@ -36,8 +36,10 @@ For anyone who likes a quiet reminder that time is the one thing you can't get b
   <img src="images/month.png" width="22%" alt="Month view">
   &nbsp;
   <img src="images/year.png" width="22%" alt="Year view">
+  &nbsp;
+  <img src="images/timer.png" width="22%" alt="Timer view">
 </p>
-<p align="center"><i>Day • Week • Month • Year — switch scopes with the pills, the ring and menu-bar label follow. <b>Launch at Login</b> keeps Time Left running from day one.</i></p>
+<p align="center"><i>Day • Week • Month • Year • Timer — switch scopes with the pills, the ring and menu-bar label follow. <b>Launch at Login</b> keeps Time Left running from day one.</i></p>
 
 ## Install (one file)
 
