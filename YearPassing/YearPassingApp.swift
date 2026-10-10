@@ -123,12 +123,17 @@ struct YearPassingApp: App {
             VStack(spacing: 14) {
                 scopePills
                 ringHero(scope: selectedScope)
-                if selectedScope == .timer {
-                    timerControls
-                        .transition(.opacity)
-                } else {
-                    scopeRows
-                        .transition(.opacity)
+                // ZStack (not VStack) so the two blocks share space during the
+                // crossfade — a stacked if/else briefly holds both, shoving the
+                // content below down before it settles back up.
+                ZStack {
+                    if selectedScope == .timer {
+                        timerControls
+                            .transition(.opacity)
+                    } else {
+                        scopeRows
+                            .transition(.opacity)
+                    }
                 }
                 Divider()
                 Toggle("Launch at Login", isOn: Binding(
