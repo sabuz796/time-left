@@ -1,7 +1,7 @@
 import Foundation
 import Cocoa
 
-func renderIcon(pixels: Int, progress: Double) -> NSBitmapImageRep {
+func renderIcon(pixels: Int) -> NSBitmapImageRep {
     let rep = NSBitmapImageRep(
         bitmapDataPlanes: nil,
         pixelsWide: pixels,
@@ -75,7 +75,6 @@ struct IconGen {
             try? FileManager.default.removeItem(atPath: "\(outDir)/\(f)")
         }
 
-        let progress = calculateProgress().year
         let specs: [(Int, String)] = [
             (16, "icon_16x16.png"),
             (32, "icon_16x16@2x.png"),
@@ -89,8 +88,8 @@ struct IconGen {
             (1024, "icon_512x512@2x.png"),
         ]
         for (pixels, name) in specs {
-            writePNG(renderIcon(pixels: pixels, progress: progress), to: URL(fileURLWithPath: "\(outDir)/\(name)"))
+            writePNG(renderIcon(pixels: pixels), to: URL(fileURLWithPath: "\(outDir)/\(name)"))
         }
-        print("Icon set generated at \(outDir) (year \(Int(progress * 100))%)")
+        print("Icon set generated at \(outDir)")
     }
 }

@@ -26,8 +26,8 @@ rm -rf "$ICONSET"
 swiftc \
   -target arm64-apple-macos13.0 \
   -sdk "$SDK" \
+  -parse-as-library \
   "$ROOT/scripts/gen_icon.swift" \
-  "$ROOT/YearPassing/TimeCalculations.swift" \
   -o /tmp/gen_icon
 /tmp/gen_icon "$ICONSET"
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"

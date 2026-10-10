@@ -3,19 +3,9 @@ import Foundation
 enum Scope: String, CaseIterable {
     case day, week, month, year, timer
 
-    var name: String {
-        switch self {
-        case .day: "Day"
-        case .week: "Week"
-        case .month: "Month"
-        case .year: "Year"
-        case .timer: "Timer"
-        }
-    }
+    var name: String { rawValue.capitalized }
 
-    var letter: String {
-        String(name.first!)
-    }
+    var letter: String { String(rawValue.prefix(1)).uppercased() }
 }
 
 struct TimeProgress {
@@ -35,7 +25,8 @@ struct TimeProgress {
     }
 }
 
-func timeLeftLabel(for scope: Scope, date: Date = Date()) -> String {
+func timeLeftLabel(for scope: Scope) -> String {
+    let date = Date()
     let calendar = Calendar.current
     switch scope {
     case .day:
@@ -64,7 +55,8 @@ private func leftLabel(days: Int) -> String {
     days == 1 ? "1 day left" : "\(days) days left"
 }
 
-func calculateProgress(for date: Date = Date()) -> TimeProgress {
+func calculateProgress() -> TimeProgress {
+    let date = Date()
     let calendar = Calendar.current
 
     // Day progress
@@ -91,8 +83,12 @@ func calculateProgress(for date: Date = Date()) -> TimeProgress {
 
 
 /// Pure timer math — no state, no SwiftUI. The app keeps the @AppStorage
-/// properties and delegates all logic here, so it stays testable in isolation.
+/// properties and delegates all logic here.
 enum TimerLogic {
+    /// The menu bar flashes "Done" for this long after the timer finishes,
+    /// then the app auto-reverts to the normal display.
+    static let flashSeconds: TimeInterval = 10
+
     static func isRunning(endRaw: Double, now: Date) -> Bool {
         endRaw > 0 && now < endDate(endRaw)
     }
@@ -101,10 +97,15 @@ enum TimerLogic {
         endRaw > 0 && now >= endDate(endRaw)
     }
 
-    /// First 10 seconds after the timer finishes — menu bar flashes, then auto-reverts.
+    /// Seconds elapsed since the timer ended; 0 when no timer was ever set.
+    static func sinceExpiry(endRaw: Double, now: Date) -> TimeInterval {
+        endRaw > 0 ? now.timeIntervalSince(endDate(endRaw)) : 0
+    }
+
+    /// First `flashSeconds` after the timer finishes — menu bar flashes, then auto-reverts.
     static func flashActive(endRaw: Double, now: Date) -> Bool {
-        endRaw > 0 && now.timeIntervalSince(endDate(endRaw)) >= 0
-            && now.timeIntervalSince(endDate(endRaw)) < 10
+        let since = sinceExpiry(endRaw: endRaw, now: now)
+        return endRaw > 0 && since >= 0 && since < flashSeconds
     }
 
     static func remaining(endRaw: Double, now: Date) -> TimeInterval {

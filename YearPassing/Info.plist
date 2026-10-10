@@ -4,8 +4,6 @@
 <dict>
     <key>CFBundleName</key>
     <string>Time Left</string>
-    <key>CFBundleDisplayName</key>
-    <string>Time Left</string>
     <key>CFBundleIdentifier</key>
     <string>com.timeleft.app</string>
     <key>CFBundleVersion</key>

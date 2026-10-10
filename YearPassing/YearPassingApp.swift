@@ -30,10 +30,6 @@ struct YearPassingApp: App {
     // MARK: - Timer state (persisted: survives quit/relaunch, wall-clock based)
     // Math lives in TimerLogic (TimeCalculations.swift); these are thin delegates.
 
-    private var timerEndDate: Date? {
-        timerEndDateRaw > 0 ? Date(timeIntervalSince1970: timerEndDateRaw) : nil
-    }
-
     private var timerRunning: Bool {
         TimerLogic.isRunning(endRaw: timerEndDateRaw, now: now)
     }
@@ -42,7 +38,6 @@ struct YearPassingApp: App {
         TimerLogic.isExpired(endRaw: timerEndDateRaw, now: now)
     }
 
-    /// First 10 seconds after the timer finishes — menu bar flashes, then auto-reverts.
     private var flashActive: Bool {
         TimerLogic.flashActive(endRaw: timerEndDateRaw, now: now)
     }
@@ -78,14 +73,15 @@ struct YearPassingApp: App {
     }
 
     private func handleTimerTick() {
-        guard let end = timerEndDate, now >= end else { return }
+        guard timerExpired else { return }
+        let since = TimerLogic.sinceExpiry(endRaw: timerEndDateRaw, now: now)
         if notifiedEndDateRaw != timerEndDateRaw {
             notifiedEndDateRaw = timerEndDateRaw
-            if now.timeIntervalSince(end) < 60 {
+            if since < 60 {
                 fireTimerDoneNotification(durationMinutes: timerDurationMinutes)
             }
         }
-        if now.timeIntervalSince(end) >= 10 {
+        if since >= TimerLogic.flashSeconds {
             timerEndDateRaw = 0
             notifiedEndDateRaw = 0
         }
@@ -103,8 +99,6 @@ struct YearPassingApp: App {
         }
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
-
-    private let timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
     private var selectedScope: Scope {
         Scope(rawValue: selectedScopeRaw) ?? .year
@@ -154,25 +148,27 @@ struct YearPassingApp: App {
             .padding(.vertical, 12)
             .frame(minWidth: 240, idealWidth: 260)
             .textSelection(.enabled)
-            .onReceive(timer) { _ in
-                now = Date()
-                if flashActive { bounceUp.toggle() }
-                progress = calculateProgress()
-                handleTimerTick()
-            }
         } label: {
-            HStack(spacing: 3) {
-                Image(systemName: (timerRunning || flashActive) ? "stopwatch" : "hourglass")
-                if timerRunning {
-                    Text(TimerLogic.countdownText(timerRemaining))
-                        .monospacedDigit()
-                } else if flashActive {
-                    let blink = Int(now.timeIntervalSince1970 * 2) % 2 == 0
-                    Text(blink ? "Done ✅" : "Time's up")
-                        .monospacedDigit()
-                } else {
-                    Text("\(displayScope.letter): \(Int(progress.value(for: displayScope) * 100))%")
-                        .monospacedDigit()
+            TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                HStack(spacing: 3) {
+                    Image(systemName: (timerRunning || flashActive) ? "stopwatch" : "hourglass")
+                    if timerRunning {
+                        Text(TimerLogic.countdownText(timerRemaining))
+                            .monospacedDigit()
+                    } else if flashActive {
+                        let blink = Int(now.timeIntervalSince1970 * 2) % 2 == 0
+                        Text(blink ? "Done ✅" : "Time's up")
+                            .monospacedDigit()
+                    } else {
+                        Text("\(displayScope.letter): \(Int(progress.value(for: displayScope) * 100))%")
+                            .monospacedDigit()
+                    }
+                }
+                .onChange(of: context.date) { newDate in
+                    now = newDate
+                    if flashActive { bounceUp.toggle() }
+                    progress = calculateProgress()
+                    handleTimerTick()
                 }
             }
         }
