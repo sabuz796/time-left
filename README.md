@@ -22,7 +22,7 @@ It lives quietly in your macOS menu bar as a small `⏳ Y: 71%` icon. Click it a
 - 📅 **Month** — "12 days left"
 - 🗓️ **Year** — "104 days left"
 - ⏱️ **Timer** — pick 5/10/15/30/60 min and the menu bar counts down live (`9:41`, or `1:04:09` for an hour+). Persists across quit/relaunch, gentle notification when time's up
-- 🔋 **~0.5 MB, no window, no dock icon, no network** — it just works, all day, on every Mac from macOS 13+ (Apple Silicon and Intel)
+- 🔋 **~700 KB download, no window, no dock icon, no network** — it just works, all day, on every Mac from macOS 13+ (Apple Silicon and Intel)
 
 For anyone who likes a quiet reminder that time is the one thing you can't get back. ⏳
 

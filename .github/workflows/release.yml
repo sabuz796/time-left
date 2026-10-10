@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
@@ -25,3 +25,10 @@ jobs:
             dist/TimeLeft.dmg \
             --title "$GITHUB_REF_NAME — Time Left" \
             --generate-notes
+
+      # GITHUB_TOKEN-created events don't trigger other workflows (anti-recursion),
+      # so poke the tap bump explicitly — workflow_dispatch is the documented exception.
+      - name: Trigger tap cask bump
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run "Update Homebrew Tap" --repo "$GITHUB_REPOSITORY"
