@@ -47,6 +47,15 @@ For anyone who likes a quiet reminder that time is the one thing you can't get b
 2. Double-click → drag `TimeLeft.app` → `Applications`
 3. Open `TimeLeft` — find `⏳ Y: 71%` in menu bar → click for Day/Week/Month/Year scopes, the countdown Timer, animated ring, and the Launch-at-Login toggle
 
+### 🍺 Or install with Homebrew
+
+```bash
+brew install --cask sabuz796/tap/time-left   # install
+brew upgrade --cask time-left                # update to the latest release
+```
+
+Homebrew picks up every new release automatically. Clear Gatekeeper's quarantine flag once after the first install (see below), then open the app.
+
 > 🔒 **Privacy friendly — absolutely nothing leaves this machine.** All calculations run locally in `YearPassing/TimeCalculations.swift` using `Calendar.current`. No `URLSession`, no analytics.
 
 ## ⚠️ macOS blocked the app?
@@ -54,8 +63,10 @@ For anyone who likes a quiet reminder that time is the one thing you can't get b
 If macOS shows *"TimeLeft can't be opened because it is from an unidentified developer"* or *"damaged and can't be opened"* (common for unsigned apps downloaded from the internet), remove the quarantine flag and open it:
 
 ```bash
-xattr -cr /Applications/TimeLeft.app
+xattr -d com.apple.quarantine /Applications/TimeLeft.app
 ```
+
+If macOS still complains, `xattr -cr /Applications/TimeLeft.app` clears *all* extended attributes instead.
 
 Then open the app normally. This only clears Gatekeeper's quarantine attribute — the app is fully local and touches nothing outside your Mac.
 
