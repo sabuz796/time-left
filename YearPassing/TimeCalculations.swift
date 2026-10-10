@@ -25,27 +25,31 @@ struct TimeProgress {
     }
 }
 
-func timeLeftLabel(for scope: Scope) -> String {
-    let date = Date()
-    let calendar = Calendar.current
+/// Days from the start of `calendar`'s week. 0 = the user's first day of the
+/// week, 6 = the last. Apple's `.weekday` is locale-independent (1 = Sunday),
+/// so the offset has to be taken against `firstWeekday` or the week starts on
+/// the wrong day for everyone outside the Sunday-first locale.
+func weekOffset(_ calendar: Calendar, date: Date) -> Int {
+    let weekday = calendar.component(.weekday, from: date)
+    return (weekday - calendar.firstWeekday + 7) % 7
+}
+
+func timeLeftLabel(for scope: Scope, now: Date = Date(), calendar: Calendar = .current) -> String {
     switch scope {
     case .day:
         // +1 day via the calendar (not +24h) so DST-change days are correct
-        let endOfDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: date)) ?? date
-        let comps = calendar.dateComponents([.hour, .minute], from: date, to: endOfDay)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
+        let comps = calendar.dateComponents([.hour, .minute], from: now, to: endOfDay)
         return "\(comps.hour ?? 0)h \(comps.minute ?? 0)m left"
     case .week:
-        // weekday 1 = first day of the week in the user's calendar
-        let weekday = calendar.component(.weekday, from: date)
-        let daysLeft = 7 - weekday
-        return leftLabel(days: daysLeft)
+        return leftLabel(days: 6 - weekOffset(calendar, date: now))
     case .month:
-        let daysInMonth = calendar.range(of: .day, in: .month, for: date)?.count ?? 30
-        let dayOfMonth = calendar.component(.day, from: date)
+        let daysInMonth = calendar.range(of: .day, in: .month, for: now)?.count ?? 30
+        let dayOfMonth = calendar.component(.day, from: now)
         return leftLabel(days: daysInMonth - dayOfMonth)
     case .year:
-        let daysInYear = calendar.range(of: .day, in: .year, for: date)?.count ?? 365
-        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
+        let daysInYear = calendar.range(of: .day, in: .year, for: now)?.count ?? 365
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? 1
         return leftLabel(days: daysInYear - dayOfYear)
     case .timer:
         return "" // countdown label is built in the app from the timer end date
@@ -56,27 +60,24 @@ private func leftLabel(days: Int) -> String {
     days == 1 ? "1 day left" : "\(days) days left"
 }
 
-func calculateProgress() -> TimeProgress {
-    let date = Date()
-    let calendar = Calendar.current
-
+func calculateProgress(now: Date = Date(), calendar: Calendar = .current) -> TimeProgress {
     // Day progress
-    let hour = calendar.component(.hour, from: date)
-    let minute = calendar.component(.minute, from: date)
+    let hour = calendar.component(.hour, from: now)
+    let minute = calendar.component(.minute, from: now)
     let dayProgress = Double(hour * 60 + minute) / (24.0 * 60.0)
 
-    // Week progress (weekday 1 = first day of the week in user's calendar)
-    let weekday = calendar.component(.weekday, from: date)
-    let weekProgress = Double(weekday - 1) / 7.0
+    // Week progress — 6/7 on the last day, 7/7 at the very end of it
+    let weekProgress = (Double(weekOffset(calendar, date: now))
+        + Double(hour * 60 + minute) / (24.0 * 60.0)) / 7.0
 
     // Month progress
-    let dayOfMonth = calendar.component(.day, from: date)
-    let daysInMonth = calendar.range(of: .day, in: .month, for: date)?.count ?? 30
+    let dayOfMonth = calendar.component(.day, from: now)
+    let daysInMonth = calendar.range(of: .day, in: .month, for: now)?.count ?? 30
     let monthProgress = Double(dayOfMonth - 1) / Double(daysInMonth)
 
     // Year progress
-    let dayOfYear = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
-    let daysInYear = calendar.range(of: .day, in: .year, for: date)?.count ?? 365
+    let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? 1
+    let daysInYear = calendar.range(of: .day, in: .year, for: now)?.count ?? 365
     let yearProgress = Double(dayOfYear - 1) / Double(daysInYear)
 
     return TimeProgress(day: dayProgress, week: weekProgress, month: monthProgress, year: yearProgress)

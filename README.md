@@ -73,14 +73,17 @@ Then open the app normally. This only clears Gatekeeper's quarantine attribute �
 ## Swift only, butter smooth
 
 * **Pure SwiftUI** — `MenuBarExtra` + `ProgressView` + `Calendar` (no JS/Python/deps, `otool -L` shows only SwiftUI/AppKit/Foundation plus ServiceManagement and UserNotifications)
-* **Selectable scope** — Day/Week/Month/Year pills + rows; choice persists via `@AppStorage`; tray label follows (`D: 64%` / `W: 57%` / `M: 55%` / `Y: 71%`)
+* **Selectable scope** — Day/Week/Month/Year rows; choice persists via `@AppStorage`; tray label follows (`D: 64%` / `W: 57%` / `M: 55%` / `Y: 71%`)
 * **Countdown timer** — presets 5/10/15/30/60 min; menu bar shows `m:ss` (or `h:mm:ss` for 1h+) only while a timer runs; end date is persisted so the countdown survives quit/relaunch; "Time's up" notification on finish
 * **Launch at Login** — checkbox in the popover, backed by `SMAppService`
-* **Timed** — refreshes every 0.5s via `Timer.publish` (keeps the countdown live)
+* **Week respects your locale** — the week starts on `Calendar.current.firstWeekday`, not hardcoded Sunday
 
 ## Dev
 
 ```bash
+# run the math self-check (no framework, no deps — swiftc + run)
+./scripts/test.sh
+
 # build + run instantly (no install) — your edit-test loop
 ./scripts/dev.sh
 
@@ -105,12 +108,14 @@ Or manually: `./scripts/build-dmg.sh` → GitHub → Releases → New release �
 
 ```
 scripts/build.sh            // swiftc → build/.apps/TimeLeft.app (universal, re-signed)
+scripts/test.sh             // swiftc + run the calendar/timer self-check
 scripts/dev.sh              // build + run without installing
 scripts/build-dmg.sh        // hdiutil → dist/TimeLeft.dmg
 scripts/gen_icon.swift      // app icon generator (run by build.sh)
-YearPassing/YearPassingApp.swift   // MenuBarExtra: pills, ring hero, selectable rows, countdown timer, launch-at-login toggle
-YearPassing/TimeCalculations.swift// pure Calendar math + Scope enum
+YearPassing/YearPassingApp.swift   // MenuBarExtra: ring hero, scope rows, countdown timer, launch-at-login toggle
+YearPassing/TimeCalculations.swift// pure Calendar math + Scope enum + TimerLogic
 YearPassing/Info.plist            // LSUIElement, AppIcon
+tests/TimeCalculationsTests.swift // 36 checks over the calendar + timer math
 ```
 
 MIT — build locally, share the DMG.
