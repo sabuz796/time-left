@@ -30,7 +30,8 @@ func timeLeftLabel(for scope: Scope) -> String {
     let calendar = Calendar.current
     switch scope {
     case .day:
-        let endOfDay = calendar.startOfDay(for: date).addingTimeInterval(24 * 60 * 60)
+        // +1 day via the calendar (not +24h) so DST-change days are correct
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: date)) ?? date
         let comps = calendar.dateComponents([.hour, .minute], from: date, to: endOfDay)
         return "\(comps.hour ?? 0)h \(comps.minute ?? 0)m left"
     case .week:

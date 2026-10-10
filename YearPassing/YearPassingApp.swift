@@ -62,11 +62,12 @@ struct YearPassingApp: App {
     }
 
     private func fireTimerDoneNotification(durationMinutes: Int) {
+        // The Glass chime plays via NSSound (works even in Do Not Disturb);
+        // don't also set content.sound or the alert chimes twice.
         NSSound(named: NSSound.Name("Glass"))?.play()
         let content = UNMutableNotificationContent()
         content.title = "⏰ Time's up"
         content.body = "Your \(durationMinutes) minute timer finished."
-        content.sound = .default
         UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: "timer-done", content: content, trigger: nil)
         )
@@ -100,6 +101,8 @@ struct YearPassingApp: App {
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
+    private let timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
+
     private var selectedScope: Scope {
         Scope(rawValue: selectedScopeRaw) ?? .year
     }
@@ -119,12 +122,13 @@ struct YearPassingApp: App {
         MenuBarExtra {
             VStack(spacing: 14) {
                 scopePills
+                ringHero(scope: selectedScope)
                 if selectedScope == .timer {
-                    ringHero(scope: .timer)
                     timerControls
+                        .transition(.opacity)
                 } else {
-                    ringHero(scope: selectedScope)
                     scopeRows
+                        .transition(.opacity)
                 }
                 Divider()
                 Toggle("Launch at Login", isOn: Binding(
@@ -138,37 +142,54 @@ struct YearPassingApp: App {
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity)
-                Button("Quit") {
-                    NSApplication.shared.terminate(nil)
+                HStack(spacing: 10) {
+                    Link(destination: URL(string: "https://github.com/sabuz796/time-left/issues")!) {
+                        Label("Report Bug", systemImage: "exclamationmark.bubble")
+                            .font(.callout)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(Capsule().fill(Color.primary.opacity(0.07)))
+                            .foregroundStyle(.secondary)
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+
+                    Button("Quit") {
+                        NSApplication.shared.terminate(nil)
+                    }
+                    .keyboardShortcut("q")
+                    .buttonStyle(.plain)
+                    .font(.callout)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(Color.primary.opacity(0.07)))
+                    .foregroundStyle(.secondary)
+                    .contentShape(Capsule())
                 }
-                .keyboardShortcut("q")
-                .frame(maxWidth: .infinity)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .frame(minWidth: 240, idealWidth: 260)
             .textSelection(.enabled)
+            .onReceive(timer) { _ in
+                now = Date()
+                if flashActive { bounceUp.toggle() }
+                progress = calculateProgress()
+                handleTimerTick()
+            }
         } label: {
-            TimelineView(.periodic(from: .now, by: 0.5)) { context in
-                HStack(spacing: 3) {
-                    Image(systemName: (timerRunning || flashActive) ? "stopwatch" : "hourglass")
-                    if timerRunning {
-                        Text(TimerLogic.countdownText(timerRemaining))
-                            .monospacedDigit()
-                    } else if flashActive {
-                        let blink = Int(now.timeIntervalSince1970 * 2) % 2 == 0
-                        Text(blink ? "Done ✅" : "Time's up")
-                            .monospacedDigit()
-                    } else {
-                        Text("\(displayScope.letter): \(Int(progress.value(for: displayScope) * 100))%")
-                            .monospacedDigit()
-                    }
-                }
-                .onChange(of: context.date) { newDate in
-                    now = newDate
-                    if flashActive { bounceUp.toggle() }
-                    progress = calculateProgress()
-                    handleTimerTick()
+            HStack(spacing: 3) {
+                Image(systemName: (timerRunning || flashActive) ? "stopwatch" : "hourglass")
+                if timerRunning {
+                    Text(TimerLogic.countdownText(timerRemaining))
+                        .monospacedDigit()
+                } else if flashActive {
+                    let blink = Int(now.timeIntervalSince1970 * 2) % 2 == 0
+                    Text(blink ? "Done ✅" : "Time's up")
+                        .monospacedDigit()
+                } else {
+                    Text("\(displayScope.letter): \(Int(progress.value(for: displayScope) * 100))%")
+                        .monospacedDigit()
                 }
             }
         }
@@ -208,6 +229,7 @@ struct YearPassingApp: App {
                 .trim(from: 0, to: isTimer ? 1 - pct : pct)
                 .stroke(scope.color, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                 .rotationEffect(.degrees(-90))
+                .animation(.easeInOut(duration: 0.35), value: scope)
             VStack(spacing: 2) {
                 if isTimer {
                     if timerRunning {
@@ -237,9 +259,12 @@ struct YearPassingApp: App {
                     Text("\(Int(pct * 100))%")
                         .font(.system(size: 26, weight: .bold, design: .rounded))
                         .monospacedDigit()
+                        .contentTransition(.numericText())
                     Text(timeLeftLabel(for: scope))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .id(scope)
+                        .transition(.opacity)
                 }
             }
         }
@@ -320,6 +345,7 @@ struct YearPassingApp: App {
                     .tint(scope.color)
                 Text(trailing)
                     .font(.callout.monospacedDigit())
+                    .contentTransition(.numericText())
                     .foregroundStyle(isActive ? Color.primary : Color.secondary)
                     .frame(width: 44, alignment: .trailing)
             }
