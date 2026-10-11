@@ -1,18 +1,37 @@
+import AppKit
 import SwiftUI
 import ServiceManagement
 import UserNotifications
 
 extension Scope {
+    /// Ring and bar colors. One hex per scope per appearance — the lighter
+    /// set for light mode, a lifted set for dark so the bars don't sink into
+    /// a dark panel. No derived/interpolated values: these are the palette.
     var color: Color {
         switch self {
-        case .day: .blue
-        case .week: .purple
-        case .month: .green
-        case .year: Color(red: 0xFF / 255.0, green: 0xA2 / 255.0, blue: 0x59 / 255.0) // #FFA259
-        case .timer: Color(red: 0xE4 / 255.0, green: 0x57 / 255.0, blue: 0x42 / 255.0) // #E45742
+        case .day: adaptive(light: 0x5B9BD5, dark: 0x7BB8E8)
+        case .week: adaptive(light: 0x9B7EBD, dark: 0xB39DDB)
+        case .month: adaptive(light: 0x6BBF8A, dark: 0x8FD4A8)
+        case .year: adaptive(light: 0xFF9A8B, dark: 0xFFB3A1)
+        case .timer: adaptive(light: 0xF2B35A, dark: 0xF7C56B)
         }
     }
 
+    /// An NSColor that re-resolves against the current appearance, so the
+    /// ring re-tints on the fly when the user switches system theme.
+    private func adaptive(light: Int, dark: Int) -> Color {
+        func rgb(_ hex: Int) -> NSColor {
+            NSColor(srgbRed: CGFloat((hex >> 16) & 0xFF) / 255,
+                    green: CGFloat((hex >> 8) & 0xFF) / 255,
+                    blue: CGFloat(hex & 0xFF) / 255,
+                    alpha: 1)
+        }
+        return Color(NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+                ? rgb(dark)
+                : rgb(light)
+        })
+    }
 }
 
 /// Press state for the panel's custom capsule buttons. `.plain` drops it
@@ -47,10 +66,6 @@ struct YearPassingApp: App {
         static let pill: CGFloat = 7
     }
 
-    /// Filled Start button. Scope.timer.color is only 3.66:1 against white;
-    /// this is 4.9:1. Ring strokes keep #E45742 — they need only 3:1.
-    private static let timerFill = Color(red: 0xC0 / 255.0, green: 0x39 / 255.0, blue: 0x2B / 255.0) // #C0392B
-
     // MARK: - Timer state (persisted: survives quit/relaunch, wall-clock based)
     // Math lives in TimerLogic (TimeCalculations.swift); these are thin delegates.
 
@@ -82,13 +97,12 @@ struct YearPassingApp: App {
         timerStartedMinutes > 0 ? timerStartedMinutes : timerDurationMinutes
     }
 
-    /// Clears the timer and leaves the Timer tab. The menu bar label falls
-    /// back to `selectedScope`, which reads "T: 0%" if left on .timer.
+    /// Clears the timer. Leaves the panel on the Timer tab so the next run is
+    /// one tap away — the label reports "no timer" rather than a bogus "T: 0%".
     private func resetTimer() {
         timerEndDateRaw = 0
         timerStartedMinutes = 0
         notifiedEndDateRaw = 0
-        if selectedScope == .timer { select(.year) }
     }
 
     private func startTimer() {
@@ -151,6 +165,10 @@ struct YearPassingApp: App {
             selectedScopeRaw = scope.rawValue
         }
     }
+
+    /// Start-button fill. Timer scope colour, both appearances — the old
+    /// #C0392B red no longer belongs to the palette.
+    private static let timerFill = Scope.timer.color
 
     var body: some Scene {
         MenuBarExtra {
@@ -221,13 +239,20 @@ struct YearPassingApp: App {
             .padding(.horizontal, Pad.outer)
             .padding(.vertical, Pad.gap)
             .frame(minWidth: 260, idealWidth: 280)
+            // The default MenuBarExtra window material is near-transparent,
+            // so text sat directly over whatever was behind the panel. A
+            // solid adaptive window background keeps it legible.
+            .background(Color(nsColor: .windowBackgroundColor))
         } label: {
             // The clock lives on the label, not the panel: MenuBarExtra
             // instantiates its content lazily, so a timer attached there only
             // ticks while the panel is open — freezing the menu bar countdown
             // and never asking for notification permission.
             HStack(spacing: 3) {
-                Image(systemName: (timerRunning || flashActive) ? "stopwatch" : "hourglass")
+                // Stopwatch = timer context, hourglass = a period passing. The
+                // Timer tab keeps the stopwatch even when idle, so the panel
+                // and the bar agree on which scope is open.
+                Image(systemName: (timerRunning || flashActive || selectedScope == .timer) ? "stopwatch" : "hourglass")
                 if timerRunning {
                     Text(TimerLogic.countdownText(timerRemaining))
                         .monospacedDigit()
@@ -235,6 +260,11 @@ struct YearPassingApp: App {
                     let blink = Int(now.timeIntervalSince1970 * 2) % 2 == 0
                     Text(blink ? "Done ✅" : "Time's up")
                         .monospacedDigit()
+                } else if selectedScope == .timer {
+                    // No timer, Timer tab open: say so. progress.value(for:
+                    // .timer) is 0 by design, so a percentage here would be
+                    // a wrong number in an app showing a right one.
+                    Text("timer")
                 } else {
                     Text("\(selectedScope.letter): \(Int(progress.value(for: selectedScope) * 100))%")
                         .monospacedDigit()
@@ -274,7 +304,12 @@ struct YearPassingApp: App {
             Circle()
                 .stroke(Color.primary.opacity(0.10), lineWidth: 10)
             Circle()
-                .trim(from: 0, to: isTimer ? 1 - pct : pct)
+                // No timer = empty track. pct is 0 when idle, so `1 - pct`
+                // trimmed to 1.0 and drew a full ring around "no timer" —
+                // reading as 100% complete with nothing running.
+                .trim(from: 0, to: isTimer
+                    ? (timerRunning || flashActive ? 1 - pct : 0)
+                    : pct)
                 .stroke(scope.color, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .animation(.easeInOut(duration: 0.35), value: scope)
@@ -317,7 +352,6 @@ struct YearPassingApp: App {
             }
         }
         .frame(width: 120, height: 120)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: pct)
     }
 
     private var timerControls: some View {
@@ -331,11 +365,19 @@ struct YearPassingApp: App {
                         Text(minutes >= 60 ? "1h" : "\(minutes)m")
                             .font(.callout.weight(selected ? .semibold : .regular))
                             .monospacedDigit()
-                            .foregroundStyle(selected ? Scope.timer.color : Color.secondary)
+                            // Unselected uses .primary, not .secondary: the
+                            // amber tint barely moves contrast either way
+                            // (2.38:1 at 7%, 2.33:1 at 22%), so the text colour
+                            // is the only lever that matters — primary is
+                            // 7.4:1 against the tint, secondary is 2.3:1.
+                            // Selected is solid amber + black, matching Start.
+                            .foregroundStyle(selected ? Color.black : Color.primary)
                             .padding(.horizontal, Pad.pill)
                             .padding(.vertical, Pad.pill)
                             .background(
-                                Capsule().fill(Scope.timer.color.opacity(selected ? 0.22 : 0.07))
+                                Capsule().fill(selected
+                                    ? Scope.timer.color
+                                    : Scope.timer.color.opacity(0.15))
                             )
                             .contentShape(Capsule())
                     }
@@ -353,10 +395,12 @@ struct YearPassingApp: App {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Pad.row)
                     .background(
+                        // One style for both states. The running state used a
+                        // 18% amber wash with amber text — faint twice over.
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(timerRunning ? Scope.timer.color.opacity(0.18) : Self.timerFill)
+                            .fill(Self.timerFill)
                     )
-                    .foregroundStyle(timerRunning ? Scope.timer.color : Color.white)
+                    .foregroundStyle(Color.black)
             }
             .buttonStyle(CapsulePress())
             if timerRunning {
@@ -378,8 +422,8 @@ struct YearPassingApp: App {
                 } label: {
                     Text(scope.name)
                         .font(.callout.weight(selectedScope == scope ? .semibold : .regular))
-                        // Color.primary, not scope.color: #FFA259 and #E45742
-                        // fail contrast against the tinted capsule in light mode.
+                        // Color.primary, not scope.color: the palette hexes
+                        // are pastel and wash out on their own tinted capsule.
                         .foregroundStyle(selectedScope == scope ? Color.primary : Color.secondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 5)
@@ -399,18 +443,18 @@ struct YearPassingApp: App {
 
     private var scopeRows: some View {
         VStack(spacing: Pad.row) {
-            ForEach(Scope.allCases, id: \.self) { scope in
+            // Timer is a pill, not a row — it has no percentage to report, so
+            // showing it here only ever rendered an empty track and a dash.
+            ForEach(Scope.allCases.filter { $0 != .timer }, id: \.self) { scope in
                 scopeRow(scope)
             }
         }
     }
 
+    /// One row per calendar scope. Never renders Timer — it has no percentage
+    /// to report, so it lives in the pill row instead.
     private func scopeRow(_ scope: Scope) -> some View {
-        let isTimer = scope == .timer
-        let pct = isTimer ? timerElapsedFraction : progress.value(for: scope)
-        let trailing = isTimer
-            ? (timerRunning ? TimerLogic.countdownText(timerRemaining) : (timerExpired ? "Done" : "—"))
-            : "\(Int(pct * 100))%"
+        let pct = progress.value(for: scope)
         let isActive = selectedScope == scope
         return Button {
             select(scope)
@@ -420,17 +464,13 @@ struct YearPassingApp: App {
                     .font(.callout.weight(isActive ? .semibold : .regular))
                     .foregroundStyle(isActive ? Color.primary : Color.secondary)
                     .frame(width: 48, alignment: .leading)
-                // Idle = empty track (it used to render `1`, i.e. 100% done).
-                // Running depletes, finished shows full.
-                ProgressView(value: isTimer
-                    ? (timerRunning ? 1 - pct : (timerExpired ? 1 : 0))
-                    : pct)
+                ProgressView(value: pct)
                     .tint(scope.color)
-                Text(trailing)
+                Text("\(Int(pct * 100))%")
                     .font(.callout.monospacedDigit())
                     .contentTransition(.numericText())
                     .foregroundStyle(isActive ? Color.primary : Color.secondary)
-                    // Wide enough for a "1:04:09" countdown at .callout.monospacedDigit().
+                    // Wide enough for the widest value at .callout.monospacedDigit().
                     .frame(width: 56, alignment: .trailing)
             }
             .padding(.horizontal, Pad.row + 2)

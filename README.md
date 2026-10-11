@@ -31,7 +31,7 @@ For anyone who likes a quiet reminder that time is the one thing you can't get b
 <p align="center">
   <img src="images/time-left-menubar.png" width="720" alt="Time Left menu bar panel showing the progress ring, scope rows and timer">
 </p>
-<p align="center"><i>One panel, every scope — pick with the <b>pills</b> on top; the rows, the ring and the menu-bar label always agree. <b>Launch at Login</b> keeps Time Left running from day one.</i></p>
+<p align="center"><i>One panel, every scope — pick with the <b>pills</b> on top; the rows, the ring and the menu-bar label always agree. Each scope has its own colour, and <b>Launch at Login</b> keeps Time Left running from day one.</i></p>
 
 ## Install (one file)
 
@@ -79,7 +79,7 @@ Then open the app normally. This only clears Gatekeeper's quarantine attribute �
 ## Swift only, butter smooth
 
 * **Pure SwiftUI** — `MenuBarExtra` + `ProgressView` + `Calendar` (no JS/Python/deps, `otool -L` shows only SwiftUI/AppKit/Foundation plus ServiceManagement and UserNotifications)
-* **Selectable scope** — Day/Week/Month/Year pills at the top pick the scope; the rows below show every scope at once. Choice persists via `@AppStorage`; tray label follows (`D: 64%` / `W: 57%` / `M: 55%` / `Y: 71%`)
+* **Selectable scope** — Day/Week/Month/Year/Timer pills at the top pick the scope; the rows below show every calendar scope at once, each with its own colour (blue/purple/green/coral). Choice persists via `@AppStorage`; tray label follows (`D: 64%` / `W: 57%` / `M: 55%` / `Y: 71%`)
 * **Countdown timer** — presets 5/10/15/30/60 min; menu bar shows `m:ss` (or `h:mm:ss` for 1h+) only while a timer runs; end date is persisted so the countdown survives quit/relaunch; "Time's up" notification on finish
 * **Launch at Login** — checkbox in the popover, backed by `SMAppService`
 * **Week respects your locale** — the week starts on `Calendar.current.firstWeekday`, not hardcoded Sunday
@@ -104,8 +104,8 @@ Then open the app normally. This only clears Gatekeeper's quarantine attribute �
 
 ```bash
 # tag a release (triggers GitHub Actions → builds DMG + publishes release automatically)
-git tag v1.3.0
-git push origin v1.3.0
+git tag v1.3.1
+git push origin v1.3.1
 ```
 
 Or manually: `./scripts/build-dmg.sh` → GitHub → Releases → New release → attach `dist/TimeLeft.dmg`.
