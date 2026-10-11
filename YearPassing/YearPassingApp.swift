@@ -179,23 +179,28 @@ struct YearPassingApp: App {
                 // into this seam, so it can't be zero — but it doesn't need 24pt.
                 Color.clear
                     .frame(height: 8)
-                // ZStack (not VStack) so the two blocks share space during the
-                // crossfade — a stacked if/else briefly holds both, shoving the
-                // content below down before it settles back up.
+                // Both blocks stay ALIVE and swap by opacity. If/else made the
+                // panel resize on every tab switch, and the MenuBarExtra
+                // window re-anchors on resize — dropping ~50px below the menu
+                // bar on the Timer tab. Constant height = window never resizes
+                // = never detaches.
                 ZStack {
-                    if selectedScope == .timer {
-                        timerControls
-                            .frame(maxWidth: .infinity)
-                            .transition(.opacity)
-                    } else {
-                        scopeRows
-                            .frame(maxWidth: .infinity)
-                            .transition(.opacity)
-                    }
+                    scopeRows
+                        .frame(maxWidth: .infinity)
+                        .opacity(selectedScope == .timer ? 0 : 1)
+                        // Hidden block must not eat clicks (its rows are buttons)
+                        .allowsHitTesting(selectedScope != .timer)
+                    timerControls
+                        // Top-align: the region is as tall as the 4 rows, so
+                        // centering left a void above AND below the timer
+                        // block. Top-anchored, the leftover space joins the
+                        // pre-divider spacer below — same footer position on
+                        // every tab, so window height stays constant.
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .opacity(selectedScope == .timer ? 1 : 0)
+                        .allowsHitTesting(selectedScope == .timer)
                 }
-                // Report the swap region's true height. Without this the panel
-                // remembers the taller scopeRows and Timer sits in a void.
-                .fixedSize(horizontal: false, vertical: true)
+                .animation(.easeInOut(duration: 0.35), value: selectedScope)
                 Spacer(minLength: 0)
                 Divider()
                 Toggle("Launch at Login", isOn: Binding(
@@ -355,7 +360,11 @@ struct YearPassingApp: App {
     }
 
     private var timerControls: some View {
-        VStack(spacing: Pad.row + 2) {
+        // The swap region is as tall as the 4 scope rows, so this block
+        // has spare height to absorb. Equal spacers top/middle/bottom
+        // spread it — one big void anywhere reads as a layout bug.
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
             HStack(spacing: Pad.row) {
                 ForEach([5, 10, 15, 30, 60], id: \.self) { minutes in
                     let selected = timerDurationMinutes == minutes
@@ -373,7 +382,9 @@ struct YearPassingApp: App {
                             // Selected is solid amber + black, matching Start.
                             .foregroundStyle(selected ? Color.black : Color.primary)
                             .padding(.horizontal, Pad.pill)
-                            .padding(.vertical, Pad.pill)
+                            // Taller than design pill: absorbs the spare
+                            // region height as tap target, not empty gap.
+                            .padding(.vertical, 11)
                             .background(
                                 Capsule().fill(selected
                                     ? Scope.timer.color
@@ -387,13 +398,18 @@ struct YearPassingApp: App {
                     .disabled(timerRunning)
                 }
             }
+            Spacer(minLength: Pad.row + 2)
             Button {
                 timerRunning ? resetTimer() : startTimer()
             } label: {
                 Label(timerRunning ? "Stop" : "Start", systemImage: timerRunning ? "stop.fill" : "play.fill")
-                    .font(.callout.weight(.semibold))
+                    // Bold, not semibold: black-on-amber is high contrast
+                    // (11.4:1) but the semibold strokes read slightly soft
+                    // against the saturated fill.
+                    .font(.callout.weight(.bold))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, Pad.row)
+                    // Tall primary action absorbs spare region height.
+                    .padding(.vertical, 14)
                     .background(
                         // One style for both states. The running state used a
                         // 18% amber wash with amber text — faint twice over.
@@ -404,11 +420,14 @@ struct YearPassingApp: App {
             }
             .buttonStyle(CapsulePress())
             if timerRunning {
-                Text("Menu bar shows the countdown, even if you quit and reopen.")
+                // Shortened: the old 58-char sentence truncated mid-word at
+                // panel width ("…even if you quit a…") and sat at tertiary.
+                Text("Countdown keeps running in the menu bar.")
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
+            Spacer(minLength: Pad.gap)
         }
     }
 
@@ -442,7 +461,10 @@ struct YearPassingApp: App {
     }
 
     private var scopeRows: some View {
-        VStack(spacing: Pad.row) {
+        // Compact spacing: the panel's height is set by this block (it's the
+        // taller tab), and the Timer tab has to borrow that height — every
+        // point shaved here is a point of slack the timer doesn't carry.
+        VStack(spacing: 6) {
             // Timer is a pill, not a row — it has no percentage to report, so
             // showing it here only ever rendered an empty track and a dash.
             ForEach(Scope.allCases.filter { $0 != .timer }, id: \.self) { scope in
@@ -474,7 +496,9 @@ struct YearPassingApp: App {
                     .frame(width: 56, alignment: .trailing)
             }
             .padding(.horizontal, Pad.row + 2)
-            .padding(.vertical, Pad.pill)
+            // Compact: 7→4. See scopeRows comment — this block sets the
+            // panel height that the Timer tab borrows.
+            .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.primary.opacity(isActive ? 0.08 : 0))
