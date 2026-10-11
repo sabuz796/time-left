@@ -26,20 +26,12 @@ It lives quietly in your macOS menu bar as a small `⏳ Y: 71%` icon. Click it a
 
 For anyone who likes a quiet reminder that time is the one thing you can't get back. ⏳
 
-## 📸 Screenshots
+## 📸 Screenshot
 
 <p align="center">
-  <img src="images/day.png" width="22%" alt="Day view">
-  &nbsp;
-  <img src="images/week.png" width="22%" alt="Week view">
-  &nbsp;
-  <img src="images/month.png" width="22%" alt="Month view">
-  &nbsp;
-  <img src="images/year.png" width="22%" alt="Year view">
-  &nbsp;
-  <img src="images/timer.png" width="22%" alt="Timer view">
+  <img src="images/time-left-menubar.png" width="720" alt="Time Left menu bar panel showing the progress ring, scope rows and timer">
 </p>
-<p align="center"><i>Day • Week • Month • Year • Timer — switch scopes with the pills, the ring and menu-bar label follow. <b>Launch at Login</b> keeps Time Left running from day one.</i></p>
+<p align="center"><i>One panel, every scope — pick with the <b>pills</b> on top; the rows, the ring and the menu-bar label always agree. <b>Launch at Login</b> keeps Time Left running from day one.</i></p>
 
 ## Install (one file)
 
@@ -49,9 +41,23 @@ For anyone who likes a quiet reminder that time is the one thing you can't get b
 
 ### 🍺 Or install with Homebrew
 
+Tap once, then install with the short name — from then on it's just `time-left`:
+
 ```bash
-brew install --cask sabuz796/tap/time-left   # install
-brew upgrade --cask time-left                # update to the latest release
+brew tap sabuz796/tap                 # once, ever
+brew install --cask time-left
+```
+
+Or skip the tap and do it in a single command:
+
+```bash
+brew install --cask sabuz796/tap/time-left
+```
+
+Either way, update later with:
+
+```bash
+brew upgrade --cask time-left
 ```
 
 Homebrew picks up every new release automatically. Clear Gatekeeper's quarantine flag once after the first install (see below), then open the app.
@@ -73,7 +79,7 @@ Then open the app normally. This only clears Gatekeeper's quarantine attribute �
 ## Swift only, butter smooth
 
 * **Pure SwiftUI** — `MenuBarExtra` + `ProgressView` + `Calendar` (no JS/Python/deps, `otool -L` shows only SwiftUI/AppKit/Foundation plus ServiceManagement and UserNotifications)
-* **Selectable scope** — Day/Week/Month/Year rows; choice persists via `@AppStorage`; tray label follows (`D: 64%` / `W: 57%` / `M: 55%` / `Y: 71%`)
+* **Selectable scope** — Day/Week/Month/Year pills at the top pick the scope; the rows below show every scope at once. Choice persists via `@AppStorage`; tray label follows (`D: 64%` / `W: 57%` / `M: 55%` / `Y: 71%`)
 * **Countdown timer** — presets 5/10/15/30/60 min; menu bar shows `m:ss` (or `h:mm:ss` for 1h+) only while a timer runs; end date is persisted so the countdown survives quit/relaunch; "Time's up" notification on finish
 * **Launch at Login** — checkbox in the popover, backed by `SMAppService`
 * **Week respects your locale** — the week starts on `Calendar.current.firstWeekday`, not hardcoded Sunday
@@ -98,8 +104,8 @@ Then open the app normally. This only clears Gatekeeper's quarantine attribute �
 
 ```bash
 # tag a release (triggers GitHub Actions → builds DMG + publishes release automatically)
-git tag v1.2
-git push origin v1.2
+git tag v1.3.0
+git push origin v1.3.0
 ```
 
 Or manually: `./scripts/build-dmg.sh` → GitHub → Releases → New release → attach `dist/TimeLeft.dmg`.

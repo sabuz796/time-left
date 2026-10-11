@@ -71,11 +71,24 @@ struct YearPassingApp: App {
     }
 
     private var timerElapsedFraction: Double {
-        // The duration the timer was STARTED with, not the currently selected
-        // preset — the chips are disabled mid-timer but the plist survives a
-        // relaunch, and a changed divisor would silently move the ring.
-        let started = timerStartedMinutes > 0 ? timerStartedMinutes : timerDurationMinutes
-        return TimerLogic.elapsedFraction(endRaw: timerEndDateRaw, durationMinutes: started, now: now)
+        TimerLogic.elapsedFraction(endRaw: timerEndDateRaw, durationMinutes: startedMinutes, now: now)
+    }
+
+    /// The duration this timer was started with, not the currently selected
+    /// preset — the chips are disabled mid-timer but the plist survives a
+    /// relaunch, and a changed divisor would silently move the ring or name
+    /// the wrong duration in the notification.
+    private var startedMinutes: Int {
+        timerStartedMinutes > 0 ? timerStartedMinutes : timerDurationMinutes
+    }
+
+    /// Clears the timer and leaves the Timer tab. The menu bar label falls
+    /// back to `selectedScope`, which reads "T: 0%" if left on .timer.
+    private func resetTimer() {
+        timerEndDateRaw = 0
+        timerStartedMinutes = 0
+        notifiedEndDateRaw = 0
+        if selectedScope == .timer { select(.year) }
     }
 
     private func startTimer() {
@@ -84,15 +97,6 @@ struct YearPassingApp: App {
         notifiedEndDateRaw = 0
         // Permission is asked at launch, not here: prompting over the menu bar
         // panel mid-press means a dismissal silently kills the notification.
-    }
-
-    private func stopTimer() {
-        timerEndDateRaw = 0
-        timerStartedMinutes = 0
-        notifiedEndDateRaw = 0
-        // The menu bar label falls back to the selected scope; leaving it on
-        // .timer would show "T: 0%" with no timer running.
-        if selectedScope == .timer { select(.year) }
     }
 
     private func fireTimerDoneNotification(durationMinutes: Int) {
@@ -113,13 +117,13 @@ struct YearPassingApp: App {
         if notifiedEndDateRaw != timerEndDateRaw {
             notifiedEndDateRaw = timerEndDateRaw
             if since < 60 {
-                fireTimerDoneNotification(durationMinutes: timerDurationMinutes)
+                fireTimerDoneNotification(durationMinutes: startedMinutes)
             }
         }
         if since >= TimerLogic.flashSeconds {
-            timerEndDateRaw = 0
-            timerStartedMinutes = 0
-            notifiedEndDateRaw = 0
+            // resetTimer also leaves the Timer tab — otherwise the label falls
+            // through to "T: 0%", since progress.value(for: .timer) is always 0.
+            resetTimer()
         }
     }
 
@@ -151,6 +155,7 @@ struct YearPassingApp: App {
     var body: some Scene {
         MenuBarExtra {
             VStack(spacing: Pad.gap) {
+                scopePills
                 ringHero(scope: selectedScope)
                 // Small air above the swap region: the ring's stroke bleeds
                 // into this seam, so it can't be zero — but it doesn't need 24pt.
@@ -216,16 +221,23 @@ struct YearPassingApp: App {
             .padding(.horizontal, Pad.outer)
             .padding(.vertical, Pad.gap)
             .frame(minWidth: 260, idealWidth: 280)
-            .task {
-                // Asked once at launch, never over the panel mid-press.
-                let settings = await UNUserNotificationCenter.current().notificationSettings()
-                notificationsAllowed = (settings.authorizationStatus == .authorized
-                                        || settings.authorizationStatus == .provisional)
-                if settings.authorizationStatus == .notDetermined {
-                    _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
-                    let after = await UNUserNotificationCenter.current().notificationSettings()
-                    notificationsAllowed = (after.authorizationStatus == .authorized
-                                            || after.authorizationStatus == .provisional)
+        } label: {
+            // The clock lives on the label, not the panel: MenuBarExtra
+            // instantiates its content lazily, so a timer attached there only
+            // ticks while the panel is open — freezing the menu bar countdown
+            // and never asking for notification permission.
+            HStack(spacing: 3) {
+                Image(systemName: (timerRunning || flashActive) ? "stopwatch" : "hourglass")
+                if timerRunning {
+                    Text(TimerLogic.countdownText(timerRemaining))
+                        .monospacedDigit()
+                } else if flashActive {
+                    let blink = Int(now.timeIntervalSince1970 * 2) % 2 == 0
+                    Text(blink ? "Done ✅" : "Time's up")
+                        .monospacedDigit()
+                } else {
+                    Text("\(selectedScope.letter): \(Int(progress.value(for: selectedScope) * 100))%")
+                        .monospacedDigit()
                 }
             }
             .onReceive(timer) { _ in
@@ -239,19 +251,16 @@ struct YearPassingApp: App {
                 }
                 handleTimerTick()
             }
-        } label: {
-            HStack(spacing: 3) {
-                Image(systemName: (timerRunning || flashActive) ? "stopwatch" : "hourglass")
-                if timerRunning {
-                    Text(TimerLogic.countdownText(timerRemaining))
-                        .monospacedDigit()
-                } else if flashActive {
-                    let blink = Int(now.timeIntervalSince1970 * 2) % 2 == 0
-                    Text(blink ? "Done ✅" : "Time's up")
-                        .monospacedDigit()
-                } else {
-                    Text("\(selectedScope.letter): \(Int(progress.value(for: selectedScope) * 100))%")
-                        .monospacedDigit()
+            .task {
+                // Asked once at launch, never over the panel mid-press.
+                let settings = await UNUserNotificationCenter.current().notificationSettings()
+                notificationsAllowed = (settings.authorizationStatus == .authorized
+                                        || settings.authorizationStatus == .provisional)
+                if settings.authorizationStatus == .notDetermined {
+                    _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+                    let after = await UNUserNotificationCenter.current().notificationSettings()
+                    notificationsAllowed = (after.authorizationStatus == .authorized
+                                            || after.authorizationStatus == .provisional)
                 }
             }
         }
@@ -337,7 +346,7 @@ struct YearPassingApp: App {
                 }
             }
             Button {
-                timerRunning ? stopTimer() : startTimer()
+                timerRunning ? resetTimer() : startTimer()
             } label: {
                 Label(timerRunning ? "Stop" : "Start", systemImage: timerRunning ? "stop.fill" : "play.fill")
                     .font(.callout.weight(.semibold))
@@ -357,6 +366,35 @@ struct YearPassingApp: App {
                     .multilineTextAlignment(.center)
             }
         }
+    }
+
+    /// Scope selector across the top. Kept alongside the scope rows on
+    /// purpose: the pills pick the scope, the rows show every scope at once.
+    private var scopePills: some View {
+        HStack(spacing: 4) {
+            ForEach(Scope.allCases, id: \.self) { scope in
+                Button {
+                    select(scope)
+                } label: {
+                    Text(scope.name)
+                        .font(.callout.weight(selectedScope == scope ? .semibold : .regular))
+                        // Color.primary, not scope.color: #FFA259 and #E45742
+                        // fail contrast against the tinted capsule in light mode.
+                        .foregroundStyle(selectedScope == scope ? Color.primary : Color.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule().fill(scope.color.opacity(selectedScope == scope ? 0.25 : 0))
+                        )
+                        .contentShape(Capsule())
+                }
+                // CapsulePress, not .plain: the system styles bring a bezel
+                // that double-stacks on the capsule fills.
+                .buttonStyle(CapsulePress())
+            }
+        }
+        .padding(3)
+        .background(Capsule().fill(Color.primary.opacity(0.06)))
     }
 
     private var scopeRows: some View {
@@ -382,7 +420,11 @@ struct YearPassingApp: App {
                     .font(.callout.weight(isActive ? .semibold : .regular))
                     .foregroundStyle(isActive ? Color.primary : Color.secondary)
                     .frame(width: 48, alignment: .leading)
-                ProgressView(value: isTimer ? (timerRunning ? 1 - pct : 1) : pct)
+                // Idle = empty track (it used to render `1`, i.e. 100% done).
+                // Running depletes, finished shows full.
+                ProgressView(value: isTimer
+                    ? (timerRunning ? 1 - pct : (timerExpired ? 1 : 0))
+                    : pct)
                     .tint(scope.color)
                 Text(trailing)
                     .font(.callout.monospacedDigit())

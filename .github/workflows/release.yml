@@ -15,6 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Fail the release before building anything if the calendar/timer math
+      # regressed — a tagged release is otherwise irreversible on the tap.
+      - name: Run self-check
+        run: ./scripts/test.sh
+
       - name: Build DMG
         run: ./scripts/build-dmg.sh
 
